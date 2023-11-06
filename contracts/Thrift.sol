@@ -1,90 +1,63 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.12;
+pragma solidity ^0.8.19;
+import "./Jointthrift.sol";
+import "./Singlethrift.sol";
 
 
-// Uncomment this line to use console.log
-// import "hardhat/console.sol";
+contract Thrift{
 
-contract Thrift {
-    // struct GroupContribution {
-    //     address payable contributor;
-    //     uint256 amount;
-    //     uint256 nonce;
-    //     uint256 unlockTime;
-    // }
-
-    // struct JointContribution {
-    //     address payable contributor;
-    //     uint256 amount;
-    //     uint256 nonce;
-    //     uint256 unlockTime;
-    // }
-
-    // struct Transaction {
-    //     address payable to;
-    //     uint256 amount;
-    //     uint256 nonce;
-    // }
-    
-    
-    //group contribution
-    //Joint contribution
-
-    struct Contribution {
-        address contributor;
+    struct account {
+        address accountOwner;
         string goalDescription;
         uint256 target;
-        uint256 duration;
-        uint256 startTime;
-        uint256 endTime;
-        uint256 amountContributed;
-        bool goalStatus;
     }
 
-    mapping(address => Contribution[]) public contributions;
-
-    modifier goalExists(uint256 _goalId, address _goalCreator) {
-        require(_goalId < contributions[_goalCreator].length, "Goal does not exist");
-        _;
-    }
-
-    modifier goalNotCompleted(uint256 _goalId, address _goalCreator) {
-        require(contributions[_goalCreator][_goalId].goalStatus == false, "Goal has already been completed");
-        _;
-    }
-
-    modifier validString(string memory _string) {
-        require(bytes(_string).length > 0, "String must not be empty");
-        _;
-    }
+    event NewGoalCreated(address indexed owner, string indexed goalDescription, Singlethrift indexed Thriftaddress);
+    event GoalUpdated(address indexed owner, uint256 indexed Thriftid, uint256 updateTime);
 
 
-    function createGoal(string memory goalDescription, uint256 target, uint256 duration) public validString(goalDescription) {
-        require(duration > 0 && target > 0, "Duration/target must be greater than 0");
+    Singlethrift[] allSingleThrift;
+    Jointthrift[] alljointThrift;
 
-        contributions[msg.sender].push(Contribution(msg.sender, goalDescription, target, duration, block.timestamp, block.timestamp + duration, 0, false));
+    mapping(address => Singlethrift[]) singleThriftCreated;
+    mapping(address => Jointthrift[]) jointThriftCreated;
 
+
+
+    function singleContribution(IERC20 _currency, string memory _goalDescription,  uint256 _target, uint256 _duration) external returns(Singlethrift singlethrift){
+        singlethrift = new Singlethrift(msg.sender, address(this), _goalDescription, _target, _duration, _currency);
+        allSingleThrift.push(singlethrift);
+        singleThriftCreated[msg.sender].push(singlethrift);
+
+       emit NewGoalCreated(msg.sender, _goalDescription, singlethrift);
+
+       return singlethrift;
     }
 
 
+    function jointContribution (IERC20 _currency, uint256 members, address[] memory membersAddress, string memory goalDescription, uint256 _target, uint256 _duration) external{
+        uint256 duration = _duration + block.timestamp;
+        Jointthrift jointThrift = new Jointthrift(msg.sender, address(this), goalDescription,  _target, duration, _currency,  members, membersAddress);
+        alljointThrift.push(jointThrift);
+        jointThriftCreated[msg.sender].push(jointThrift);
 
-    function completeGoal(uint256 _goalId, address _goalCreator) public goalExists(_goalId, _goalCreator) goalNotCompleted(_goalId, _goalCreator) {
-        require(contributions[_goalCreator][_goalId].target <= address(this).balance, "Goal has not been met");
-
-        contributions[_goalCreator][_goalId].goalStatus = true;
-        payable(_goalCreator).transfer(contributions[_goalCreator][_goalId].target);
-    }
-    
-
-
-
-
-
-    function getContribution() public view returns (Contribution[] memory) {
-        return contributions[msg.sender];
     }
 
+    function allSingle() external view returns(Singlethrift[] memory){
+        return allSingleThrift;
+    }
 
+    function allJoint() external view returns(Jointthrift[] memory){
+        return alljointThrift;
+    }
+
+    function userSingleThrift(address owner) external view returns (Singlethrift[] memory){
+        return singleThriftCreated[owner];
+    }
+
+    function userGroupThrift(address owner) external view returns (Jointthrift[] memory){
+        return jointThriftCreated[owner];
+    }
 
 
 }
