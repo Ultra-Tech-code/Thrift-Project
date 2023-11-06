@@ -24,8 +24,8 @@ contract Thrift{
 
 
 
-    function singleContribution(IERC20 _currency, string memory _goalDescription,  uint256 _target, uint256 _duration) external returns(Singlethrift singlethrift){
-        singlethrift = new Singlethrift(msg.sender, address(this), _goalDescription, _target, _duration, _currency);
+    function singleContribution(IERC20 _currency, string memory _goalDescription,  uint256 _target, uint256 _duration, uint256 _startTime) external returns(Singlethrift singlethrift){
+        singlethrift = new Singlethrift(msg.sender, address(this), _goalDescription, _target, _duration, _currency, _startTime);
         allSingleThrift.push(singlethrift);
         singleThriftCreated[msg.sender].push(singlethrift);
 
@@ -36,6 +36,7 @@ contract Thrift{
 
 
     function jointContribution (IERC20 _currency, uint256 members, address[] memory membersAddress, string memory goalDescription, uint256 _target, uint256 _duration) external{
+        require(members == membersAddress.length, "MATCH!!!");
         uint256 duration = _duration + block.timestamp;
         Jointthrift jointThrift = new Jointthrift(msg.sender, address(this), goalDescription,  _target, duration, _currency,  members, membersAddress);
         alljointThrift.push(jointThrift);

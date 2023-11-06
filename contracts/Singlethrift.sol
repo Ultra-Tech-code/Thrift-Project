@@ -3,11 +3,12 @@ pragma solidity ^0.8.19;
 import "./IERC20.sol";
 
 
-contract SingleThrift {
+contract Singlethrift {
+    address owner;
 
     struct Account {
-        address owner;
-        uint256 thriftID;
+        address accountOwner;
+        address thriftAddress;
         string goalDescription;
         uint256 target;
         uint256 duration;
@@ -24,50 +25,50 @@ contract SingleThrift {
     error NotGoal();
     error NotDeadline();
 
+    modifier onlyOwner(){
+        require(msg.sender == owner, "UNAUTHORIZED");
+        _;
+    }
 
-    mapping(address => mapping(uint256 => Account)) accounts;
-    mapping(address => uint256[]) contributionCreated;
+    mapping(address => Account) accounts;
 
-    function createGoal(address _owner, string memory _goalDescription, uint256 _target, uint256 _duration, IERC20 _currency, uint256 _startTime ) external returns(uint256 thriftID) {
-
-
-            Account memory account = Account({
-                owner: _owner,
-                thriftID: thriftID,
-                goalDescription: _goalDescription,
-                target: _target,
-                duration: _duration,
-                currency: _currency,
-                startTime: _startTime,
-                endTime: block.timestamp + _duration,
-                amountContributed: 0,
-                goalStatus: false 
-            });
-
-            accounts[_owner][thriftID] = account;
-
-            emit NewGoalCreated(_owner,_goalDescription, thriftID);
+    constructor (address _owner, address _thriftAddress, string memory _goalDescription, uint256 _target, uint256 _duration, IERC20 _currency, uint256 _startTime ){
+        owner = _owner;
+        accounts[_owner]= Account({
+            accountOwner: _owner,
+            thriftAddress: _thriftAddress,
+            goalDescription: _goalDescription,
+            target: _target,
+            duration: _duration,
+            currency: _currency,
+            startTime: _startTime,
+            endTime: block.timestamp + _duration,
+            amountContributed: 0,
+            goalStatus: false 
+        });
 
     }
 
-    function editGoal(address _owner, uint256 _thriftid) external {
+
+    function editGoal(address _owner) external {
 
        // emit GoalUpdated()
 
     }
 
-    function save(address _owner, uint256 _thriftid, uint256 _amount) external {
-        Account memory account = accounts[_owner][_thriftid];
+    function save(address _owner, uint256 _amount) external {
+        Account memory account = accounts[_owner];
         require(!account.goalStatus, "TARGET REACHED");
+        require(account.currency.transfer(address(this), _amount*1e18), "FAILED!!");
 
         if(account.amountContributed + _amount >= account.target ){
-            accounts[_owner][_thriftid].goalStatus = true;
+            accounts[_owner].goalStatus = true;
         }
-        accounts[_owner][_thriftid].amountContributed += _amount;
+        accounts[_owner].amountContributed += _amount;
     }
 
-    function withdraw(address _owner, uint256 _thriftid) external {
-        Account memory account = accounts[_owner][_thriftid];
+    function withdraw(address _owner) external {
+        Account memory account = accounts[_owner];
         require(account.amountContributed > 0, "NO FUNDS!!");
         if(!account.goalStatus ){
             revert NotGoal(); 
@@ -76,7 +77,7 @@ contract SingleThrift {
             revert NotDeadline();
         }
 
-        accounts[_owner][_thriftid].amountContributed = 0;
+        accounts[_owner].amountContributed = 0;
     }
 
     function getGoal() external {
@@ -87,45 +88,28 @@ contract SingleThrift {
         //check if amount saved is not less than the penalty fee
     }
 
-    function getAmountSaved(address _owner, uint256 _thriftid) view external returns(uint256){
-        return accounts[_owner][_thriftid].amountContributed;
+    function getAmountSaved(address _owner) view external returns(uint256){
+        return accounts[_owner].amountContributed;
 
     } 
 
-    function getDeadline(address _owner, uint256 _thriftid) view external returns(uint256){
-        return accounts[_owner][_thriftid].endTime;
+    function getDeadline(address _owner) view external returns(uint256){
+        return accounts[_owner].endTime;
 
     }
 
-    function getTarget(address _owner, uint256 _thriftid) view external returns(uint256){
-        return accounts[_owner][_thriftid].target;
+    function getTarget(address _owner) view external returns(uint256){
+        return accounts[_owner].target;
 
     }
 
-    function getuserAccount(address _owner, uint256 _thriftid) view external returns(Account memory){
-        return accounts[_owner][_thriftid];
-        
+    function getuserAccount(address _owner) view external returns(Account memory){
+        return accounts[_owner];    
     }
 
-    function getusersAllAcount() view external {
-
+    function getDescription(address _owner) view external returns(string memory){
+        return accounts[_owner].goalDescription;
     }
-
-    function getAllAcount() view external returns(Account[] memory){
-        //uint256[] memory allUserCampaignIndex = allUserCampaings[_userAddress];
-        Account[] memory account = new Account[](totalSingleThrift);
-    
-        // for (uint256 i = 0; i < totalSingleThrift; i++) {
-        //     // uint256 campaignIndex = allUserCampaignIndex[i];
-        //     // require(campaignIndex < campaignId, "Invalid campaign index");
-        //     account[i] = Account[i];
-        // }
-    
-        return account;
-
-    }
-
-
 
 
 }
