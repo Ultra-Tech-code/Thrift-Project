@@ -1,16 +1,23 @@
 import { ethers } from "hardhat";
 
 async function main() {
+  // const deployer = (await ethers.getSigners())[0];
+  const[deployer, user1, user2, user3] = await ethers.getSigners();
 
+  //Deploy USDT contract
+  const USDT = await ethers.deployContract("USDT");
+  await USDT.waitForDeployment();
+  console.log(`USDT deployed to ${USDT.target}`);
+
+
+  // Deploy Thrift contract
   const Thrift = await ethers.deployContract("Thrift");
-
   await Thrift.waitForDeployment();
-
   console.log(`Thrift  deployed to ${Thrift.target}`);
-
 
 //interact with contract
 const thrift = await ethers.getContractAt("Thrift", Thrift.target);
+const usdt = await ethers.getContractAt("USDT", USDT.target);
 
 const target = ethers.parseEther("100");
 const duration = 60 * 60 * 24 * 7; // 7 days
@@ -19,17 +26,21 @@ const endTime = startTime + duration;
 
 
 //createGoal
-const createGoalTx = await thrift.createGoal("buy car", target, startTime);
-const createGoalReceipt = await createGoalTx.wait();
-// const goalId = createGoalReceipt.events[0].args[0].toNumber();
-console.log(`Goal created with id ${createGoalReceipt}`);
+const singlethrifttx = await thrift.connect(user1).createSingleThrift(usdt.target, "Buy a new car", target, duration, startTime);
+const singlethriftReceipt = await singlethrifttx.wait();
+// get returned address
+//@ts-ignore
+const singlethriftAddress = singlethriftReceipt.events;
+console.log(singlethriftAddress)
+console.log(singlethriftReceipt)
 
+// get allSingle created
+const allSingle = await thrift.allSingle();
+console.log(allSingle)
 
-
-//getContribution
-const contribution = await thrift.getContribution();
-console.log(`Contribution: ${contribution.toString()}`);
-
+//get userSingleThrift created
+const userSingle = await thrift.userSingleThrift(deployer.address);
+console.log(userSingle)
 
 
 }
