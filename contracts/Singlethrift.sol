@@ -30,11 +30,12 @@ contract Singlethrift {
         _;
     }
 
-    mapping(address => Account) accounts;
+    // mapping(address => Account) accounts;
+    Account account;
 
     constructor (address _owner, address _thriftAddress, string memory _goalDescription, uint256 _target, uint256 _duration, IERC20 _currency, uint256 _startTime ){
         owner = _owner;
-        accounts[_owner]= Account({
+        account = Account({
             accountOwner: _owner,
             thriftAddress: _thriftAddress,
             goalDescription: _goalDescription,
@@ -56,19 +57,18 @@ contract Singlethrift {
 
     }
 
-    function save(address _owner, uint256 _amount) external {
-        Account memory account = accounts[_owner];
+    function save(uint256 _amount) external {
+       
         require(!account.goalStatus, "TARGET REACHED");
         require(account.currency.transfer(address(this), _amount*1e18), "FAILED!!");
 
         if(account.amountContributed + _amount >= account.target ){
-            accounts[_owner].goalStatus = true;
+            account.goalStatus = true;
         }
-        accounts[_owner].amountContributed += _amount;
+        account.amountContributed += _amount;
     }
 
-    function withdraw(address _owner) external {
-        Account memory account = accounts[_owner];
+    function withdraw() external {
         require(account.amountContributed > 0, "NO FUNDS!!");
         if(!account.goalStatus ){
             revert NotGoal(); 
@@ -77,7 +77,7 @@ contract Singlethrift {
             revert NotDeadline();
         }
 
-        accounts[_owner].amountContributed = 0;
+        account.amountContributed = 0;
     }
 
     function getGoal() external {
@@ -88,27 +88,27 @@ contract Singlethrift {
         //check if amount saved is not less than the penalty fee
     }
 
-    function getAmountSaved(address _owner) view external returns(uint256){
-        return accounts[_owner].amountContributed;
+    function getAmountSaved() view external returns(uint256){
+        return account.amountContributed;
 
     } 
 
-    function getDeadline(address _owner) view external returns(uint256){
-        return accounts[_owner].endTime;
+    function getDeadline() view external returns(uint256){
+        return account.endTime;
 
     }
 
-    function getTarget(address _owner) view external returns(uint256){
-        return accounts[_owner].target;
+    function getTarget() view external returns(uint256){
+        return account.target;
 
     }
 
-    function getuserAccount(address _owner) view external returns(Account memory){
-        return accounts[_owner];    
+    function getuserAccount() view external returns(Account memory){
+        return account;    
     }
 
-    function getDescription(address _owner) view external returns(string memory){
-        return accounts[_owner].goalDescription;
+    function getDescription() view external returns(string memory){
+        return account.goalDescription;
     }
 
 

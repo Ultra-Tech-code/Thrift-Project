@@ -3,8 +3,13 @@ pragma solidity ^0.8.19;
 import "./IERC20.sol";
 
 
-contract Jointthrift {
+contract Groupthrift {
     uint256 memberId;
+
+    event NewGoalCreated(address indexed owner, string indexed goalDescription, uint256 indexed target);
+    event GoalUpdated(address indexed owner, uint256 indexed Thriftid, uint256 updateTime);
+    event NewSave(address indexed owner, uint256 indexed target, uint256 indexed time);
+    event NewWithdraw(address indexed owner, uint256 indexed amount, uint256 indexed time);
 
     struct Account {
         address owner;
@@ -24,30 +29,30 @@ contract Jointthrift {
     struct userAccount{
         address ownerAddress;
         bool goalStatus;
-        uint256 amountRaised;
+        uint256 amountContributed;
         bool withdraw;
     }
 
-    event NewGoalCreated(address indexed owner, string indexed goalDescription, uint256 indexed target);
-    event GoalUpdated(address indexed owner, uint256 indexed Thriftid, uint256 updateTime);
+    error Goal(string);
+    error Deadline(string);
+    error Owner(string);
 
-    error NotGoal();
-    error NotDeadline();
+
+    // mapping(address => Account) usersaccount;
+    mapping(address => uint256) saved;
+    mapping(address => bool) isValid;
+    mapping(address => userAccount) usersaccount;
 
     modifier validMember(address _member){
         require(isValid[_member] == true, "NOT VALID!!");
         _;
     }
 
-
-    // mapping(address => Account) accounts;
-    mapping(address => uint256) saved;
-    mapping(address => bool) isValid;
-    mapping(address => userAccount) usersaccount;
+    Account account;
 
     constructor (address _owner,address _thriftAddress, string memory _goalDescription, uint256 _target, uint256 _duration, IERC20 _currency, uint256 _startTime, uint256 _members, address[] memory _membersAddress) {
 
-            Account account = Account({
+            account = Account({
                 owner: _owner,
                 thriftAddress: _thriftAddress,
                 goalDescription: _goalDescription,
@@ -72,7 +77,7 @@ contract Jointthrift {
             emit NewGoalCreated(_owner, _goalDescription, _target);
     }
 
-    function editGoal(address _owner, uint256 _thriftid) external {
+    function editGoal(address _owner) external {
 
        // emit GoalUpdated()
 
@@ -80,33 +85,42 @@ contract Jointthrift {
 
     function save(address _member, uint256 _amount) external validMember(_member) {
         require(_amount > 0, "INVALID!!");
-        userAccount memory act = usersaccount[_member];
-        act.ownerAddress = _member;
-        act.amountRaised += _amount;
-
-        Account memory account;
-        require(account.currency.transfer(address(this), _amount*1e18), "FAILED!!");
-        
-        
-        require(!account.goalStatus, "TARGET REACHED");
-
-        if(account.amountContributed + _amount >= account.target ){
-            accounts[_owner][_thriftid].goalStatus = true;
+        userAccount storage USA = usersaccount[_member];
+        if(USA.goalStatus ){
+            revert Goal("TARGET REACHED!!!"); 
         }
-        accounts[_owner][_thriftid].amountContributed += _amount;
+        if(account.endTime <= block.timestamp){
+            revert Deadline("DEADLINE PASSED!!");
+        }
+        require(account.currency.transfer(address(this), _amount*1e18), "FAILED!!");
+        if(USA.amountContributed + _amount >= account.target ){
+            USA.goalStatus = true;
+        }
+        USA.ownerAddress = _member;
+        USA.amountContributed += _amount;
+        account.amountContributed += _amount;
+
+        emit NewSave(_member, _amount, block.timestamp);
     }
 
-    function withdraw(address _owner, uint256 _thriftid) external {
-        Account memory account = accounts[_owner][_thriftid];
-        require(account.amountContributed > 0, "NO FUNDS!!");
-        if(!account.goalStatus ){
-            revert NotGoal(); 
+    function withdraw(address _member) external validMember(_member) {
+        userAccount storage USA = usersaccount[_member];
+        if(msg.sender != _member){
+           revert Owner("NOT OWNER!!");
         }
+        require(USA.amountContributed > 0, "NO FUNDS!!");
         if(account.endTime > block.timestamp){
-            revert NotDeadline();
+            revert Deadline("DEADLINE NOT REACHED");
         }
+        if(!account.goalStatus ){
+            //remove penalty fee
+        }
+        uint256 amount = USA.amountContributed;
+        USA.amountContributed = 0;
+        USA.withdraw = true;
+        account.currency.transferFrom(address(this), _member, amount);
 
-        accounts[_owner][_thriftid].amountContributed = 0;
+        emit NewWithdraw(msg.sender, amount, block.timestamp);
     }
 
     function getGoal() external {
@@ -117,28 +131,27 @@ contract Jointthrift {
         //check if amount saved is not less than the penalty fee
     }
 
-    function getAmountSaved(address _owner, uint256 _thriftid) view external returns(uint256){
-        return accounts[_owner][_thriftid].amountContributed;
+    function getAmountSaved(address _member) view external returns(uint256){
+        return usersaccount[_member].amountContributed;
 
     } 
 
-    function getDeadline(address _owner, uint256 _thriftid) view external returns(uint256){
-        return accounts[_owner][_thriftid].endTime;
+    function getDeadline() view external returns(uint256){
+        return account.endTime;
 
     }
 
-    function getTarget(address _owner, uint256 _thriftid) view external returns(uint256){
-        return accounts[_owner][_thriftid].target;
+    function getTarget() view external returns(uint256){
+        return account.target;
 
     }
 
-    function getuserAccount(address _owner, uint256 _thriftid) view external returns(Account memory){
-        return accounts[_owner][_thriftid];
-        
+    function getuserAccount(address _member) view external validMember(_member) returns (userAccount memory){
+        return usersaccount[_member];  
     }
 
-    function getusersAllAcount() view external {
-
+    function getAcount() view external returns(Account memory) {
+        return account;
     }
 
     function getAllAcount() view external returns(Account[] memory){
