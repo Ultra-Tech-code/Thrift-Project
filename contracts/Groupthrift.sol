@@ -51,6 +51,12 @@ contract Groupthrift {
     Account account;
 
     constructor (address _owner,address _thriftAddress, string memory _goalDescription, uint256 _target, uint256 _duration, IERC20 _currency, uint256 _startTime, uint256 _members, address[] memory _membersAddress) {
+            for (uint i = 0; i < _members; i++) {
+               address member = _membersAddress[i];
+
+                require(member != address(0), "INVALID!!!");
+                isValid[member] = true;
+            }
 
             account = Account({
                 owner: _owner,
@@ -66,13 +72,6 @@ contract Groupthrift {
                 amountContributed: 0,
                 goalStatus: false 
             });
-
-            for (uint i = 0; i < _members; i++) {
-               address member = _membersAddress[i];
-
-                require(member != address(0), "INVALID!!!");
-                isValid[member] = true;
-            }
 
             emit NewGoalCreated(_owner, _goalDescription, _target);
     }

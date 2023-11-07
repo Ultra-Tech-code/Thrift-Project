@@ -17,10 +17,10 @@ contract Thrift{
 
 
     Singlethrift[] allSingleThrift;
-    Jointthrift[] alljointThrift;
+    Groupthrift[] allgroupthrift;
 
     mapping(address => Singlethrift[]) singleThriftCreated;
-    mapping(address => Jointthrift[]) jointThriftCreated;
+    mapping(address => Groupthrift[]) groupThriftCreated;
 
 
 
@@ -35,12 +35,12 @@ contract Thrift{
     }
 
 
-    function jointContribution (IERC20 _currency, uint256 members, address[] memory membersAddress, string memory goalDescription, uint256 _target, uint256 _duration) external{
-        require(members == membersAddress.length, "MATCH!!!");
+    function groupContribution (IERC20 _currency, uint256 members, address[] memory membersAddress, string memory goalDescription, uint256 _target, uint256 _duration, uint256 _startime) external{
+        require(members == membersAddress.length, "NOT MATCH!!!");
         uint256 duration = _duration + block.timestamp;
-        Jointthrift jointThrift = new Jointthrift(msg.sender, address(this), goalDescription,  _target, duration, _currency,  members, membersAddress);
-        alljointThrift.push(jointThrift);
-        jointThriftCreated[msg.sender].push(jointThrift);
+        Groupthrift groupThrift = new Groupthrift(msg.sender, address(this), goalDescription,  _target, duration, _currency, _startime,  members, membersAddress);
+        allgroupthrift.push(groupThrift);
+        groupThriftCreated[msg.sender].push(groupThrift);
 
     }
 
@@ -48,16 +48,16 @@ contract Thrift{
         return allSingleThrift;
     }
 
-    function allJoint() external view returns(Jointthrift[] memory){
-        return alljointThrift;
+    function allGroup() external view returns(Groupthrift[] memory){
+        return allgroupthrift;
     }
 
     function userSingleThrift(address owner) external view returns (Singlethrift[] memory){
         return singleThriftCreated[owner];
     }
 
-    function userGroupThrift(address owner) external view returns (Jointthrift[] memory){
-        return jointThriftCreated[owner];
+    function userGroupThrift(address owner) external view returns (Groupthrift[] memory){
+        return groupThriftCreated[owner];
     }
 
 
