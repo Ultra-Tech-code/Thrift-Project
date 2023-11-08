@@ -6,6 +6,11 @@ import "./IERC20.sol";
 contract Singlethrift {
     address owner;
 
+    event NewGoalCreated(address indexed owner, string indexed goalDescription, uint256 indexed Thriftid);
+    event GoalUpdated(address indexed owner, uint256 indexed Thriftid, uint256 updateTime);
+    event NewSave(address indexed saver, uint256 indexed target, uint256 indexed time);
+    event NewWithdraw(address indexed owner, uint256 indexed amount, uint256 indexed time);
+
     struct Account {
         address accountOwner;
         address thriftAddress;
@@ -19,11 +24,10 @@ contract Singlethrift {
         bool goalStatus;
     }
 
-    event NewGoalCreated(address indexed owner, string indexed goalDescription, uint256 indexed Thriftid);
-    event GoalUpdated(address indexed owner, uint256 indexed Thriftid, uint256 updateTime);
-
-    error NotGoal();
-    error NotDeadline();
+    error Goal(string);
+    error Deadline(string);
+    error Owner(string);
+    error Amount(string);
 
     modifier onlyOwner(){
         require(msg.sender == owner, "UNAUTHORIZED");
@@ -48,6 +52,7 @@ contract Singlethrift {
             goalStatus: false 
         });
 
+        emit NewGoalCreated(_owner, _goalDescription, _target);
     }
 
 
@@ -58,26 +63,45 @@ contract Singlethrift {
     }
 
     function save(uint256 _amount) external {
-       
-        require(!account.goalStatus, "TARGET REACHED");
-        require(account.currency.transfer(address(this), _amount*1e18), "FAILED!!");
+        if(_amount <= 0){
+            revert Amount("INVALID AMOUNT!!");
+        }
+        if(account.goalStatus){
+            revert Goal("TARGET REACHED!!!"); 
+        }
+        if(account.endTime <= block.timestamp){
+            revert Deadline("DEADLINE PASSED!!");
+        }
+        require(account.currency.transfer(address(this), _amount), "FAILED!!");
 
         if(account.amountContributed + _amount >= account.target ){
             account.goalStatus = true;
         }
         account.amountContributed += _amount;
+
+        emit NewSave(msg.sender, _amount, block.timestamp);
     }
 
     function withdraw() external {
-        require(account.amountContributed > 0, "NO FUNDS!!");
-        if(!account.goalStatus ){
-            revert NotGoal(); 
+        if(account.amountContributed <= 0){
+            revert Amount("NO FUNDS!!!!");
+        }
+        address _owner = account.accountOwner;
+        if(msg.sender != _owner){
+            revert Owner("NOT OWNER!!");
+         }
+        if(!account.goalStatus){
+            //revert Goal("TARGET NOT REACHED!!!");
+            //penalty fee
         }
         if(account.endTime > block.timestamp){
-            revert NotDeadline();
+            revert Deadline("DEADLINE NOT REACHED!!");
         }
-
+        uint256 amount = account.amountContributed;
         account.amountContributed = 0;
+        require(account.currency.transferFrom(address(this), _owner, amount), "FAILED!!");
+
+        emit NewWithdraw(msg.sender, amount, block.timestamp);
     }
 
     function getGoal() external {
@@ -103,7 +127,7 @@ contract Singlethrift {
 
     }
 
-    function getuserAccount() view external returns(Account memory){
+    function getAccount() view external returns(Account memory){
         return account;    
     }
 

@@ -15,7 +15,7 @@ async function main() {
   await Thrift.waitForDeployment();
   console.log(`Thrift  deployed to ${Thrift.target}`);
 
-//interact with contract
+//-------------interact with contract------------//
 const thrift = await ethers.getContractAt("Thrift", Thrift.target);
 const usdt = await ethers.getContractAt("USDT", USDT.target);
 
@@ -24,23 +24,49 @@ const duration = 60 * 60 * 24 * 7; // 7 days
 const startTime = Math.round(Date.now() / 1000);
 const endTime = startTime + duration;
 
-
 //createGoal
 const singlethrifttx = await thrift.connect(user1).createSingleThrift(usdt.target, "Buy a new car", target, duration, startTime);
 const singlethriftReceipt = await singlethrifttx.wait();
-// get returned address
-//@ts-ignore
-const singlethriftAddress = singlethriftReceipt.events;
-console.log(singlethriftAddress)
 console.log(singlethriftReceipt)
 
 // get allSingle created
 const allSingle = await thrift.allSingle();
+const singlethriftAddress = allSingle[0];
 console.log(allSingle)
 
 //get userSingleThrift created
-const userSingle = await thrift.userSingleThrift(deployer.address);
+const userSingle = await thrift.userSingleThrift(user1.address);
 console.log(userSingle)
+
+
+
+//------------------usdt intercation-------------//
+//mint
+const minttx = await usdt.mintToken(user1.address, target)
+await minttx.wait();
+
+//approve
+const approvetx = await usdt.connect(user1).approve(singlethriftAddress, target)
+await approvetx.wait()
+
+
+
+//----Interact with the singlethrift contract
+const singlethrift = await ethers.getContractAt("Singlethrift", singlethriftAddress);
+
+//getAccount
+const getAccounttx = await singlethrift.getAccount()
+console.log(getAccounttx, "get account result")
+
+
+//save
+let amount = ethers.parseEther("100")
+const savetx = await singlethrift.save(amount)
+await savetx.wait();
+
+//withdraw
+const withdrawtx = await singlethrift.withdraw()
+await withdrawtx.wait();
 
 
 }

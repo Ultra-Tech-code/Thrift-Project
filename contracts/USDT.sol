@@ -9,7 +9,7 @@ contract USDT is ERC20("USDT", "USDT") {
 
     constructor() {
         owner = msg.sender;
-        _mint(address(this), 9000000e18);
+        _mint(address(this), 9000000*1e18);
     }
 
     modifier onlyOwner() {
