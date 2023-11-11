@@ -91,7 +91,7 @@ contract Groupthrift {
         if(account.endTime <= block.timestamp){
             revert Deadline("DEADLINE PASSED!!");
         }
-        require(account.currency.transfer(address(this), _amount*1e18), "FAILED!!");
+        require(account.currency.transferFrom(msg.sender, address(this), _amount*1e18), "FAILED!!");
         if(USA.amountContributed + _amount >= account.target ){
             USA.goalStatus = true;
         }
@@ -117,7 +117,7 @@ contract Groupthrift {
         uint256 amount = USA.amountContributed;
         USA.amountContributed = 0;
         USA.withdraw = true;
-        account.currency.transferFrom(address(this), _member, amount);
+        account.currency.transfer(_member, amount);
 
         emit NewWithdraw(msg.sender, amount, block.timestamp);
     }

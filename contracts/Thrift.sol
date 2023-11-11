@@ -6,11 +6,7 @@ import "./Singlethrift.sol";
 
 contract Thrift{
 
-    struct account {
-        address accountOwner;
-        string goalDescription;
-        uint256 target;
-    }
+    address Admin;  
 
     event NewSingleCreated(address indexed owner, string indexed goalDescription, Singlethrift indexed Thriftaddress);
     event NewGroupCreated(address indexed owner, string indexed goalDescription, Groupthrift indexed Thriftaddress);
@@ -23,10 +19,13 @@ contract Thrift{
     mapping(address => Singlethrift[]) singleThriftCreated;
     mapping(address => Groupthrift[]) groupThriftCreated;
 
+    constructor(){
+        Admin = msg.sender;   
+    }
 
 
-    function createSingleThrift(IERC20 _currency, string memory _goalDescription,  uint256 _target, uint256 _duration, uint256 _startTime) external returns(Singlethrift singlethrift){
-        singlethrift = new Singlethrift(msg.sender, address(this), _goalDescription, _target, _duration, _currency, _startTime);
+    function createSingleThrift(IERC20 _currency, string memory _goalDescription,  uint256 _target, uint256 _duration, uint256 _startTime, uint256 _savingInterval) external returns(Singlethrift singlethrift){
+        singlethrift = new Singlethrift(msg.sender, address(this), _goalDescription, _target, _duration, _currency, _startTime, _savingInterval);
         allSingleThrift.push(singlethrift);
         singleThriftCreated[msg.sender].push(singlethrift);
 
@@ -60,6 +59,14 @@ contract Thrift{
     function userGroupThrift(address owner) external view returns (Groupthrift[] memory){
         return groupThriftCreated[owner];
     }
+
+    function withdrawFee(address _tokenAddress) external{
+        require(msg.sender == Admin, "NOT ADMIN");
+        IERC20 token = IERC20(_tokenAddress);
+        token.transfer(msg.sender, token.balanceOf(address(this)));
+    }
+
+    receive() external payable{}
 
 
 }

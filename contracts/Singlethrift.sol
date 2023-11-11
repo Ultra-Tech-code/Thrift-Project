@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.19;
 import "./IERC20.sol";
-
+//use comsole.log to debug
+import "hardhat/console.sol";
 
 contract Singlethrift {
     address owner;
@@ -21,24 +22,32 @@ contract Singlethrift {
         uint256 startTime;
         uint256 endTime;
         uint256 amountContributed;
+        uint256 savingInterval;
+        uint256 lastPaymentCycle;
         bool goalStatus;
+        bool canceled;
     }
 
     error Goal(string);
     error Deadline(string);
     error Owner(string);
     error Amount(string);
+    error Deleted(string);
+    error Start(string, uint256);
+    error PaymentCycle(string);
 
     modifier onlyOwner(){
         require(msg.sender == owner, "UNAUTHORIZED");
         _;
     }
 
-    // mapping(address => Account) accounts;
+    mapping(uint256 => bool) paid;
+
     Account account;
 
-    constructor (address _owner, address _thriftAddress, string memory _goalDescription, uint256 _target, uint256 _duration, IERC20 _currency, uint256 _startTime ){
+    constructor (address _owner, address _thriftAddress, string memory _goalDescription, uint256 _target, uint256 _duration, IERC20 _currency, uint256 _startTime, uint256 _savingInterval ){
         owner = _owner;
+        _startTime += block.timestamp;
         account = Account({
             accountOwner: _owner,
             thriftAddress: _thriftAddress,
@@ -47,23 +56,47 @@ contract Singlethrift {
             duration: _duration,
             currency: _currency,
             startTime: _startTime,
-            endTime: block.timestamp + _duration,
+            endTime: _duration + _startTime,
             amountContributed: 0,
-            goalStatus: false 
+            savingInterval: _savingInterval,
+            lastPaymentCycle: 0,
+            goalStatus: false,
+            canceled: false
         });
 
         emit NewGoalCreated(_owner, _goalDescription, _target);
     }
 
 
-    function editGoal(address _owner) external {
+    function editGoal() external {
 
        // emit GoalUpdated()
 
     }
 
     function save(uint256 _amount) external {
-        if(_amount <= 0){
+        if(account.startTime >= block.timestamp){
+            revert Start("Can't save yet!!", account.startTime);
+        }
+        // uint256 cycleTimeLeft = (account.paymentCycleDeterminant - block.timestamp ) / account.savingInterval;
+        // uint256 nextpaymentCycle =  cycleTimeLeft + block.timestamp;
+        // require(account.lastPaymentCycle <= currentCycle, "Payment already made in this cycle");
+        // if(block.timestamp < nextPaymentCycleStart){
+        //     revert PaymentCycle(" WAIT FOR NEXT PAYMENT CYCLE!!");
+        // }
+        uint256 elapsedTime = block.timestamp - account.startTime;
+        
+        // Calculate the current cycle based on the elapsed time since the start
+        uint256 currentCycle = elapsedTime / account.savingInterval;
+
+        // Check if the user has already made a payment in the current cycle
+        if(paid[currentCycle] == true){
+            revert PaymentCycle(" WAIT FOR NEXT PAYMENT CYCLE!!");
+        }
+        if(account.canceled){
+            revert Deleted("ACCOUNT Deleted!!");
+         }
+        if(_amount < amountToSavePerInterval() || _amount > amountToSavePerInterval()){
             revert Amount("INVALID AMOUNT!!");
         }
         if(account.goalStatus){
@@ -72,17 +105,23 @@ contract Singlethrift {
         if(account.endTime <= block.timestamp){
             revert Deadline("DEADLINE PASSED!!");
         }
-        require(account.currency.transfer(address(this), _amount), "FAILED!!");
+        require(account.currency.transferFrom(msg.sender, address(this), _amount), "FAILED!!");
 
         if(account.amountContributed + _amount >= account.target ){
             account.goalStatus = true;
         }
         account.amountContributed += _amount;
+        account.lastPaymentCycle = currentCycle;
+        paid[currentCycle] = true;
 
         emit NewSave(msg.sender, _amount, block.timestamp);
     }
 
     function withdraw() external {
+        uint256 amount = account.amountContributed;
+        if(account.canceled){
+            revert Deleted("ACCOUNT Deleted!!");
+         }
         if(account.amountContributed <= 0){
             revert Amount("NO FUNDS!!!!");
         }
@@ -90,26 +129,49 @@ contract Singlethrift {
         if(msg.sender != _owner){
             revert Owner("NOT OWNER!!");
          }
-        if(!account.goalStatus){
-            //revert Goal("TARGET NOT REACHED!!!");
-            //penalty fee
-        }
         if(account.endTime > block.timestamp){
             revert Deadline("DEADLINE NOT REACHED!!");
         }
-        uint256 amount = account.amountContributed;
-        account.amountContributed = 0;
-        require(account.currency.transferFrom(address(this), _owner, amount), "FAILED!!");
-
+        if(account.endTime > block.timestamp && !account.goalStatus){
+            uint256 _penaltyfee = amount * 5 / 100;
+            uint256 _amount = amount - _penaltyfee;
+            account.amountContributed = 0;
+            require(account.currency.transfer(_owner, _amount), "FAILED!!");
+            require(account.currency.transfer(account.thriftAddress, _penaltyfee), "FAILED!!");
+        }else{
+            account.amountContributed = 0;
+            require(account.currency.transfer(_owner, amount), "FAILED!!");
+        }
         emit NewWithdraw(msg.sender, amount, block.timestamp);
     }
 
-    function getGoal() external {
+    function getGoalStatus() external view returns(bool){
+        return account.goalStatus;
 
     }
 
     function emergencyWithdrawal() external {
-        //check if amount saved is not less than the penalty fee
+        address _owner = account.accountOwner;
+        if(msg.sender != _owner){
+            revert Owner("NOT OWNER!!");
+         }
+         if(account.canceled){
+            revert Deleted("ACCOUNT Deleted!!");
+         }
+         if(account.goalStatus){
+            revert Goal("TARGET REACHED!!!");
+         }
+         if(account.amountContributed <= 0){
+            account.canceled = true;
+        }else{
+            uint256 amountSaved = account.amountContributed;
+            account.amountContributed = 0;
+            uint256 penaltyfee = amountSaved * 5 / 100;
+            uint256 amount = amountSaved - penaltyfee;
+            require(account.currency.transfer(account.thriftAddress, penaltyfee), "FAILED!!");
+            require(account.currency.transfer(_owner, amount), "FAILED!!");
+            account.canceled = true;
+        }
     }
 
     function getAmountSaved() view external returns(uint256){
@@ -133,6 +195,14 @@ contract Singlethrift {
 
     function getDescription() view external returns(string memory){
         return account.goalDescription;
+    }
+
+    function calculateTimeLeft() view external returns(uint256){
+        return account.endTime - block.timestamp;
+    }
+
+    function amountToSavePerInterval() view public returns(uint256){
+        return account.target / (account.duration / account.savingInterval);
     }
 
 

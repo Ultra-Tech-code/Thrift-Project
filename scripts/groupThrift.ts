@@ -19,28 +19,23 @@ async function main() {
 const thrift = await ethers.getContractAt("Thrift", Thrift.target);
 const usdt = await ethers.getContractAt("USDT", USDT.target);
 
-
-//get block.timestamp
-const blockTime = await ethers.provider.getBlock("latest");
 const target = ethers.parseEther("100");
 const duration = 60 * 60 * 24 * 7; // 7 days
-const interval = 60 * 60 * 24 * 1; // 1 days
-const startTime = 60 * 60 * 24 * 2; // 2 days
-
-
+const startTime = Math.round(Date.now() / 1000);
+const endTime = startTime + duration;
 
 //createGoal
-const singlethrifttx = await thrift.connect(user1).createSingleThrift(usdt.target, "Buy a new car", target, duration, startTime, interval);
+const singlethrifttx = await thrift.connect(user1).createGroupThrift(usdt.target, "Buy a new car", target, duration, startTime);
 const singlethriftReceipt = await singlethrifttx.wait();
 console.log(singlethriftReceipt)
 
 // get allSingle created
-const allSingle = await thrift.allSingle();
+const allSingle = await thrift.allGroup();
 const singlethriftAddress = allSingle[0];
 console.log(allSingle)
 
 //get userSingleThrift created
-const userSingle = await thrift.userSingleThrift(user1.address);
+const userSingle = await thrift.userGroupThrift(user1.address);
 console.log(userSingle)
 
 
@@ -65,19 +60,13 @@ const singlethrift = await ethers.getContractAt("Singlethrift", singlethriftAddr
 const getAccounttx = await singlethrift.getAccount()
 console.log(getAccounttx, "get account result")
 
-// hardhat time travel
-await ethers.provider.send("evm_increaseTime", [startTime + 3000]); // in first cycle
+
 //save
-let amount = await singlethrift.amountToSavePerInterval()
-console.log(amount, "amount")
-
-
-const savetx = await singlethrift.connect(user1).save(ethers.toBigInt(amount))
+let amount = ethers.parseEther("100")
+const savetx = await singlethrift.connect(user1).save(ethers.parseEther("80"))
+               await singlethrift.connect(deployer).save(ethers.parseEther("30")) 
 await savetx.wait();
 console.log(savetx, "save result")
-
-await ethers.provider.send("evm_increaseTime", [startTime + 3700]); //in second cylce
-await singlethrift.connect(deployer).save(ethers.toBigInt(amount)) 
 
 const singlethriftWhenSave = await usdt.balanceOf(singlethriftAddress)
 console.log(singlethriftWhenSave.toString(), "thrift balance when saved")
@@ -86,7 +75,7 @@ const userBalanceSaved = await usdt.balanceOf(user1.address)
 console.log(userBalanceSaved.toString(), "user balance when saved")
 
 // hardhat time travel
-await ethers.provider.send("evm_increaseTime", [60 * 60 * 24 * 10]);
+await ethers.provider.send("evm_increaseTime", [60 * 60 * 24 * 7]);
 
 //withdraw
 const withdrawtx = await singlethrift.connect(user1).withdraw()
@@ -101,11 +90,6 @@ console.log(withdrawtx, "withdraw result")
 // const saveagain = await singlethrift.connect(user1).save(ethers.parseEther("80")) //revert cos the account has been deleted
 // await saveagain.wait();
 // console.log(saveagain, "save again result")
-
-//amountToSavePerInterval
-const amountToSavePerInterval = await singlethrift.amountToSavePerInterval()
-console.log(amountToSavePerInterval.toString(), "amountToSavePerInterval")
-console.log(Number(amountToSavePerInterval) / 1e18, "amountToSavePerInterval in usdt")
 
 
 //user balance
