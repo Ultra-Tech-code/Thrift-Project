@@ -22,8 +22,10 @@ contract Groupthrift {
         uint256 endTime;
         uint256 members;
         address[] membersAddress;
+        uint256 savingInterval;
         uint256 amountContributed;
         bool goalStatus;
+        bool canceled;
     }
 
     struct userAccount{
@@ -50,13 +52,15 @@ contract Groupthrift {
 
     Account account;
 
-    constructor (address _owner,address _thriftAddress, string memory _goalDescription, uint256 _target, uint256 _duration, IERC20 _currency, uint256 _startTime, uint256 _members, address[] memory _membersAddress) {
+    constructor (address _owner,address _thriftAddress, string memory _goalDescription, uint256 _target, uint256 _duration, IERC20 _currency, uint256 _startTime, uint256 _members, address[] memory _membersAddress, uint256 _savingInterval) {
             for (uint i = 0; i < _members; i++) {
                address member = _membersAddress[i];
 
                 require(member != address(0), "INVALID!!!");
                 isValid[member] = true;
             }
+
+            _startTime += block.timestamp;
 
             account = Account({
                 owner: _owner,
@@ -69,8 +73,10 @@ contract Groupthrift {
                 endTime: block.timestamp + _duration,
                 members: _members,
                 membersAddress: _membersAddress,
+                savingInterval: _savingInterval,
                 amountContributed: 0,
-                goalStatus: false 
+                goalStatus: false,
+                canceled: false
             });
 
             emit NewGoalCreated(_owner, _goalDescription, _target);
@@ -171,6 +177,11 @@ contract Groupthrift {
        // if(memberID += 1 > )
         return memberId += 1;
     }
+
+    function amountToSavePerInterval() view public returns(uint256){
+        return account.target / (account.duration / account.savingInterval);
+    }
+
 
 
 

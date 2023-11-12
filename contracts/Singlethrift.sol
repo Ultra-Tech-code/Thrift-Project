@@ -23,7 +23,6 @@ contract Singlethrift {
         uint256 endTime;
         uint256 amountContributed;
         uint256 savingInterval;
-        uint256 lastPaymentCycle;
         bool goalStatus;
         bool canceled;
     }
@@ -59,7 +58,6 @@ contract Singlethrift {
             endTime: _duration + _startTime,
             amountContributed: 0,
             savingInterval: _savingInterval,
-            lastPaymentCycle: 0,
             goalStatus: false,
             canceled: false
         });
@@ -74,20 +72,17 @@ contract Singlethrift {
 
     }
 
-    function save(uint256 _amount) external {
+    function save() external {
         if(account.startTime >= block.timestamp){
             revert Start("Can't save yet!!", account.startTime);
         }
-        // uint256 cycleTimeLeft = (account.paymentCycleDeterminant - block.timestamp ) / account.savingInterval;
-        // uint256 nextpaymentCycle =  cycleTimeLeft + block.timestamp;
-        // require(account.lastPaymentCycle <= currentCycle, "Payment already made in this cycle");
-        // if(block.timestamp < nextPaymentCycleStart){
-        //     revert PaymentCycle(" WAIT FOR NEXT PAYMENT CYCLE!!");
-        // }
+
         uint256 elapsedTime = block.timestamp - account.startTime;
-        
+    
         // Calculate the current cycle based on the elapsed time since the start
         uint256 currentCycle = elapsedTime / account.savingInterval;
+
+        uint256 _amount = amountToSavePerInterval();
 
         // Check if the user has already made a payment in the current cycle
         if(paid[currentCycle] == true){
@@ -96,7 +91,7 @@ contract Singlethrift {
         if(account.canceled){
             revert Deleted("ACCOUNT Deleted!!");
          }
-        if(_amount < amountToSavePerInterval() || _amount > amountToSavePerInterval()){
+        if(_amount < 0){
             revert Amount("INVALID AMOUNT!!");
         }
         if(account.goalStatus){
@@ -111,7 +106,6 @@ contract Singlethrift {
             account.goalStatus = true;
         }
         account.amountContributed += _amount;
-        account.lastPaymentCycle = currentCycle;
         paid[currentCycle] = true;
 
         emit NewSave(msg.sender, _amount, block.timestamp);
