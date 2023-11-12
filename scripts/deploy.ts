@@ -25,14 +25,16 @@ const blockTime = await ethers.provider.getBlock("latest");
 const target = ethers.parseEther("100");
 const duration = 60 * 60 * 24 * 7; // 7 days
 const interval = 60 * 60 * 24 * 1; // 1 days
-const startTime = 60 * 60 * 24 * 2; // 2 days
+
+console.log(interval, "interval")
+const startTime = 60 * 60 * 24 * 2 ; // 2 days
 
 
 
 //createGoal
 const singlethrifttx = await thrift.connect(user1).createSingleThrift(usdt.target, "Buy a new car", target, duration, startTime, interval);
 const singlethriftReceipt = await singlethrifttx.wait();
-console.log(singlethriftReceipt)
+//console.log(singlethriftReceipt)
 
 // get allSingle created
 const allSingle = await thrift.allSingle();
@@ -63,10 +65,10 @@ const singlethrift = await ethers.getContractAt("Singlethrift", singlethriftAddr
 
 //getAccount
 const getAccounttx = await singlethrift.getAccount()
-console.log(getAccounttx, "get account result")
+//console.log(getAccounttx, "get account result")
 
 // hardhat time travel
-await ethers.provider.send("evm_increaseTime", [startTime + 3000]); // in first cycle
+await ethers.provider.send("evm_increaseTime", [startTime]); // in first cycle
 //save
 let amount = await singlethrift.amountToSavePerInterval()
 console.log(amount, "amount")
@@ -74,9 +76,12 @@ console.log(amount, "amount")
 
 const savetx = await singlethrift.connect(user1).save(ethers.toBigInt(amount))
 await savetx.wait();
-console.log(savetx, "save result")
+//console.log(savetx, "save result")
 
-await ethers.provider.send("evm_increaseTime", [startTime + 3700]); //in second cylce
+await ethers.provider.send("evm_increaseTime", [86400]); //in second cylce
+await singlethrift.connect(deployer).save(ethers.toBigInt(amount)) 
+
+await ethers.provider.send("evm_increaseTime", [172800]); //in fourth cylce
 await singlethrift.connect(deployer).save(ethers.toBigInt(amount)) 
 
 const singlethriftWhenSave = await usdt.balanceOf(singlethriftAddress)
@@ -91,7 +96,7 @@ await ethers.provider.send("evm_increaseTime", [60 * 60 * 24 * 10]);
 //withdraw
 const withdrawtx = await singlethrift.connect(user1).withdraw()
 await withdrawtx.wait();
-console.log(withdrawtx, "withdraw result")
+//console.log(withdrawtx, "withdraw result")
 
 //csheck for emergency withdrawal
 // const ewithdrawtx = await singlethrift.connect(user1).emergencyWithdrawal()
