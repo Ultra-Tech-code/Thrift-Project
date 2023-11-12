@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.19;
 import "./IERC20.sol";
-
+//use comsole.log to debug
+import "hardhat/console.sol";
 
 contract Groupthrift {
     uint256 memberId;
@@ -25,7 +26,7 @@ contract Groupthrift {
         uint256 savingInterval;
         uint256 amountContributed;
         bool goalStatus;
-        bool canceled;
+       
     }
 
     struct userAccount{
@@ -33,26 +34,34 @@ contract Groupthrift {
         bool goalStatus;
         uint256 amountContributed;
         bool withdraw;
+        bool canceled;
     }
 
     error Goal(string);
     error Deadline(string);
     error Owner(string);
+    error Amount(string);
+    error Deleted(string);
+    error Start(string, uint256);
+    error PaymentCycle(string);
+
 
 
     // mapping(address => Account) usersaccount;
     mapping(address => uint256) saved;
     mapping(address => bool) isValid;
     mapping(address => userAccount) usersaccount;
+    mapping(address => mapping(uint256 => bool)) paid;
 
     modifier validMember(address _member){
-        require(isValid[_member] == true, "NOT VALID!!");
+        require(isValid[_member] == true, "NOT MEMBER!!");
         _;
     }
 
     Account account;
 
     constructor (address _owner,address _thriftAddress, string memory _goalDescription, uint256 _target, uint256 _duration, IERC20 _currency, uint256 _startTime, uint256 _members, address[] memory _membersAddress, uint256 _savingInterval) {
+        console.log("duration ---", _duration);
             for (uint i = 0; i < _members; i++) {
                address member = _membersAddress[i];
 
@@ -70,13 +79,12 @@ contract Groupthrift {
                 duration: _duration,
                 currency: _currency,
                 startTime: _startTime,
-                endTime: block.timestamp + _duration,
+                endTime: _duration + _startTime,
                 members: _members,
                 membersAddress: _membersAddress,
                 savingInterval: _savingInterval,
                 amountContributed: 0,
-                goalStatus: false,
-                canceled: false
+                goalStatus: false
             });
 
             emit NewGoalCreated(_owner, _goalDescription, _target);
@@ -88,21 +96,37 @@ contract Groupthrift {
 
     }
 
-    function save(address _member, uint256 _amount) external validMember(_member) {
-        require(_amount > 0, "INVALID!!");
-        userAccount storage USA = usersaccount[_member];
+    function save(address _member) external validMember(_member) {
+        userAccount memory USA = usersaccount[_member];
+        if(account.startTime >= block.timestamp){
+            revert Start("Can't save yet!!", account.startTime);
+        }
+
+        uint256 _amount = amountToSavePerInterval();
+
+        // Check if the user has already made a payment in the current cycle
+        if(paid[_member][getCycle()] == true){
+            revert PaymentCycle(" WAIT FOR NEXT PAYMENT CYCLE!!");
+        }
+        if(USA.canceled){
+            revert Deleted("ACCOUNT Deleted!!");
+         }
+         if(_amount < 0){
+            revert Amount("INVALID AMOUNT!!");
+        }
         if(USA.goalStatus ){
             revert Goal("TARGET REACHED!!!"); 
         }
         if(account.endTime <= block.timestamp){
             revert Deadline("DEADLINE PASSED!!");
         }
-        require(account.currency.transferFrom(msg.sender, address(this), _amount*1e18), "FAILED!!");
+        require(account.currency.transferFrom(msg.sender, address(this), _amount), "FAILED!!");
+
         if(USA.amountContributed + _amount >= account.target ){
-            USA.goalStatus = true;
+            usersaccount[_member].goalStatus = true;
         }
-        USA.ownerAddress = _member;
-        USA.amountContributed += _amount;
+        usersaccount[_member].ownerAddress = _member;
+        usersaccount[_member].amountContributed += _amount;
         account.amountContributed += _amount;
 
         emit NewSave(_member, _amount, block.timestamp);
@@ -110,19 +134,32 @@ contract Groupthrift {
 
     function withdraw(address _member) external validMember(_member) {
         userAccount storage USA = usersaccount[_member];
+        console.log("time..", account.endTime);
+        console.log("block time..", block.timestamp);
+        uint256 amount = USA.amountContributed;
         if(msg.sender != _member){
            revert Owner("NOT OWNER!!");
         }
-        require(USA.amountContributed > 0, "NO FUNDS!!");
+        if(amount <= 0){
+            revert Amount("NO FUNDS!!!!");
+        }
         if(account.endTime > block.timestamp){
             revert Deadline("DEADLINE NOT REACHED");
         }
-        if(!account.goalStatus ){
-            //remove penalty fee
+        if(account.endTime < block.timestamp && !USA.goalStatus){
+            uint256 _penaltyfee = amount * 5 / 100;
+            uint256 _amount = amount - _penaltyfee;
+            USA.amountContributed = 0;
+            USA.withdraw = true;
+            require(account.currency.transfer(_member, _amount), "FAILED!!");
+            require(account.currency.transfer(account.thriftAddress, _penaltyfee), "FAILED!!");
+        }else{
+            USA.amountContributed = 0;
+            USA.withdraw = true;
+            require(account.currency.transfer(_member, amount), "FAILED!!");
         }
-        uint256 amount = USA.amountContributed;
-        USA.amountContributed = 0;
-        USA.withdraw = true;
+
+     
         account.currency.transfer(_member, amount);
 
         emit NewWithdraw(msg.sender, amount, block.timestamp);
@@ -155,7 +192,7 @@ contract Groupthrift {
         return usersaccount[_member];  
     }
 
-    function getAcount() view external returns(Account memory) {
+    function getAccount() view external returns(Account memory) {
         return account;
     }
 
@@ -180,6 +217,17 @@ contract Groupthrift {
 
     function amountToSavePerInterval() view public returns(uint256){
         return account.target / (account.duration / account.savingInterval);
+    }
+
+    function getCycle() view public returns(uint256 currentCycle){
+        uint256 elapsedTime = block.timestamp - account.startTime;
+    
+        // Calculate the current cycle based on the elapsed time since the start
+        currentCycle = elapsedTime / account.savingInterval;
+    }
+
+    function paidInCycle(address _member) view public returns(bool){
+        return paid[_member][getCycle()];
     }
 
 

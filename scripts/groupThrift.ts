@@ -21,23 +21,23 @@ const usdt = await ethers.getContractAt("USDT", USDT.target);
 
 //params
 const target = ethers.parseEther("100");
-const duration = 60 * 60 * 24 * 20; // 20 days
+const duration = 60 * 60 * 24 * 10; // 10 days
 const interval = 60 * 60 * 24 * 2; // 2 days
 const startTime = 60 * 60 * 24 * 2 ; // 2 days
 
 //createGoal
-const singlethrifttx = await thrift.connect(user1).createGroupThrift(usdt.target, 3, [user1.address, user2.address, user3.address, user4.address], "Buy a new car", target, duration, startTime, interval);
-const singlethriftReceipt = await singlethrifttx.wait();
-console.log(singlethriftReceipt)
+const groupthrifttx = await thrift.connect(user1).createGroupThrift(usdt.target, 4, [user1.address, user2.address, user3.address, user4.address], "Buy a new car", target, duration, startTime, interval);
+const groupthriftReceipt = await groupthrifttx.wait();
+console.log(groupthriftReceipt)
 
 // get allSingle created
-const allSingle = await thrift.allGroup();
-const singlethriftAddress = allSingle[0];
-console.log(allSingle)
+const allGroup = await thrift.allGroup();
+const groupthriftAddress = allGroup[0];
+console.log(allGroup)
 
 //get userSingleThrift created
-const userSingle = await thrift.userGroupThrift(user1.address);
-console.log(userSingle)
+const userGroup = await thrift.userGroupThrift(user1.address);
+console.log(userGroup)
 
 
 
@@ -45,50 +45,67 @@ console.log(userSingle)
 //mint
 const minttx = await usdt.mintToken(user1.address, target)
                await usdt.mintToken(deployer.address, target)
+               await usdt.mintToken(user2.address, target)
+               await usdt.mintToken(user3.address, target)
 await minttx.wait();
 
 //approve
-const approvetx = await usdt.connect(user1).approve(singlethriftAddress, target)
-                  await usdt.connect(deployer).approve(singlethriftAddress, target)
+const approvetx = await usdt.connect(user1).approve(groupthriftAddress, target)
+                  await usdt.connect(deployer).approve(groupthriftAddress, target)
+                  await usdt.connect(user2).approve(groupthriftAddress, target)
+                  await usdt.connect(user3).approve(groupthriftAddress, target)
 await approvetx.wait()
 
 
 
-//----Interact with the singlethrift contract
-const singlethrift = await ethers.getContractAt("Singlethrift", singlethriftAddress);
+//----Interact with the groupthrift contract
+const groupthrift = await ethers.getContractAt("Groupthrift", groupthriftAddress);
 
 //getAccount
-const getAccounttx = await singlethrift.getAccount()
+const getAccounttx = await groupthrift.getAccount()
 console.log(getAccounttx, "get account result")
 
+// hardhat time travel
+await ethers.provider.send("evm_increaseTime", [startTime]);
 
 //save
 let amount = ethers.parseEther("100")
-const savetx = await singlethrift.connect(user1).save(ethers.parseEther("80"))
-               await singlethrift.connect(deployer).save(ethers.parseEther("30")) 
+const savetx = await groupthrift.connect(user1).save(user1.address)
+               //await groupthrift.connect(deployer).save(deployer.address) //revert NOT MEMBER
 await savetx.wait();
+
+
+await ethers.provider.send("evm_increaseTime", [startTime]); //in second cylce
+await groupthrift.connect(user2).save(user2.address)
+
+await ethers.provider.send("evm_increaseTime", [startTime]); //in fourth cylce
+await groupthrift.connect(user3).save(user3.address)
+
+
 console.log(savetx, "save result")
 
-const singlethriftWhenSave = await usdt.balanceOf(singlethriftAddress)
+const singlethriftWhenSave = await usdt.balanceOf(groupthriftAddress)
 console.log(singlethriftWhenSave.toString(), "thrift balance when saved")
 
 const userBalanceSaved = await usdt.balanceOf(user1.address)
 console.log(userBalanceSaved.toString(), "user balance when saved")
 
 // hardhat time travel
-await ethers.provider.send("evm_increaseTime", [60 * 60 * 24 * 7]);
+await ethers.provider.send("evm_increaseTime", [duration]);
+const blockTime = await ethers.provider.getBlock("latest");
+console.log(blockTime.timestamp, "block time")
 
 //withdraw
-const withdrawtx = await singlethrift.connect(user1).withdraw()
+const withdrawtx = await groupthrift.connect(user1).withdraw(user1.address)
 await withdrawtx.wait();
 console.log(withdrawtx, "withdraw result")
 
 //csheck for emergency withdrawal
-// const ewithdrawtx = await singlethrift.connect(user1).emergencyWithdrawal()
+// const ewithdrawtx = await groupthrift.connect(user1).emergencyWithdrawal()
 // await ewithdrawtx.wait();
 // console.log(ewithdrawtx, "Emergency withdraw result")
 
-// const saveagain = await singlethrift.connect(user1).save(ethers.parseEther("80")) //revert cos the account has been deleted
+// const saveagain = await groupthrift.connect(user1).save(ethers.parseEther("80")) //revert cos the account has been deleted
 // await saveagain.wait();
 // console.log(saveagain, "save again result")
 
@@ -98,8 +115,8 @@ const userBalance = await usdt.balanceOf(user1.address)
 console.log(userBalance.toString(), "user balance")
 
 //thrift balance
-const thriftBalance = await usdt.balanceOf(singlethriftAddress)
-console.log(thriftBalance.toString(), "singlethriftAddress balance")
+const thriftBalance = await usdt.balanceOf(groupthriftAddress)
+console.log(thriftBalance.toString(), "groupthriftAddress balance")
 
 }
 

@@ -3,6 +3,9 @@ pragma solidity ^0.8.19;
 import "./Groupthrift.sol";
 import "./Singlethrift.sol";
 
+//use comsole.log to debug
+import "hardhat/console.sol";
+
 
 contract Thrift{
 
@@ -36,9 +39,7 @@ contract Thrift{
 
 
     function createGroupThrift(IERC20 _currency, uint256 members, address[] memory membersAddress, string memory goalDescription, uint256 _target, uint256 _duration, uint256 _startime, uint256 _savingInterval) external returns(Groupthrift groupThrift){
-        require(members == membersAddress.length, "MEMBER MATCH!!!");
-        uint256 duration = _duration + block.timestamp;
-        groupThrift = new Groupthrift(msg.sender, address(this), goalDescription,  _target, duration, _currency, _startime,  members, membersAddress, _savingInterval);
+        groupThrift = new Groupthrift(msg.sender, address(this), goalDescription,  _target, _duration, _currency, _startime,  members, membersAddress, _savingInterval);
         allgroupthrift.push(groupThrift);
         groupThriftCreated[msg.sender].push(groupThrift);
 

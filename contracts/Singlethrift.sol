@@ -126,7 +126,7 @@ contract Singlethrift {
         if(account.endTime > block.timestamp){
             revert Deadline("DEADLINE NOT REACHED!!");
         }
-        if(account.endTime > block.timestamp && !account.goalStatus){
+        if(account.endTime < block.timestamp && !account.goalStatus){
             uint256 _penaltyfee = amount * 5 / 100;
             uint256 _amount = amount - _penaltyfee;
             account.amountContributed = 0;
