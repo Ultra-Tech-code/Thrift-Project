@@ -5,9 +5,9 @@ async function main() {
   const[deployer, user1, user2, user3] = await ethers.getSigners();
 
   //Deploy USDT contract
-  const USDT = await ethers.deployContract("USDT");
-  await USDT.waitForDeployment();
-  console.log(`USDT deployed to ${USDT.target}`);
+  const mockToroNg = await ethers.deployContract("mockToroNg");
+  await mockToroNg.waitForDeployment();
+  console.log(`mockToro deployed to ${mockToroNg.target}`);
 
 
   // Deploy Thrift contract
@@ -17,7 +17,7 @@ async function main() {
 
 //-------------interact with contract------------//
 const thrift = await ethers.getContractAt("Thrift", Thrift.target);
-const usdt = await ethers.getContractAt("USDT", USDT.target);
+const mockToro = await ethers.getContractAt("mockToroNg", mockToroNg.target);
 
 
 //get block.timestamp
@@ -32,7 +32,7 @@ const startTime = 60 * 60 * 24 * 2 ; // 2 days
 
 
 //createGoal
-const singlethrifttx = await thrift.connect(user1).createSingleThrift(usdt.target, "Buy a new car", target, duration, startTime, interval);
+const singlethrifttx = await thrift.connect(user1).createSingleThrift(mockToroNg.target, "Buy a new car", target, duration, startTime, interval);
 const singlethriftReceipt = await singlethrifttx.wait();
 //console.log(singlethriftReceipt)
 
@@ -49,13 +49,13 @@ console.log(userSingle)
 
 //------------------usdt intercation-------------//
 //mint
-const minttx = await usdt.mintToken(user1.address, target)
-               await usdt.mintToken(deployer.address, target)
+const minttx = await mockToro.mintToken(user1.address, target)
+               await mockToro.mintToken(deployer.address, target)
 await minttx.wait();
 
 //approve
-const approvetx = await usdt.connect(user1).approve(singlethriftAddress, target)
-                  await usdt.connect(deployer).approve(singlethriftAddress, target)
+const approvetx = await mockToro.connect(user1).approve(singlethriftAddress, target)
+                  await mockToro.connect(deployer).approve(singlethriftAddress, target)
 await approvetx.wait()
 
 
@@ -86,10 +86,10 @@ await ethers.provider.send("evm_increaseTime", [172800]); //in fourth cylce
 await singlethrift.connect(user1).save() 
 
 console.log("after save")
-const singlethriftWhenSave = await usdt.balanceOf(singlethriftAddress)
+const singlethriftWhenSave = await mockToro.balanceOf(singlethriftAddress)
 console.log(singlethriftWhenSave.toString(), "thrift balance when saved")
 
-const userBalanceSaved = await usdt.balanceOf(user1.address)
+const userBalanceSaved = await mockToro.balanceOf(user1.address)
 console.log(userBalanceSaved.toString(), "user balance when saved")
 
 // hardhat time travel
@@ -116,11 +116,11 @@ console.log(Number(amountToSavePerInterval) / 1e18, "amountToSavePerInterval in 
 
 
 //user balance
-const userBalance = await usdt.balanceOf(user1.address)
+const userBalance = await mockToro.balanceOf(user1.address)
 console.log(userBalance.toString(), "user balance")
 
 //thrift balance
-const thriftBalance = await usdt.balanceOf(singlethriftAddress)
+const thriftBalance = await mockToro.balanceOf(singlethriftAddress)
 console.log(thriftBalance.toString(), "singlethriftAddress balance")
 
 }

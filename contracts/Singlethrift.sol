@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.19;
+pragma solidity ^0.8.17;
 import "./IERC20.sol";
-//use comsole.log to debug
-import "hardhat/console.sol";
 
 contract Singlethrift {
     address owner;
@@ -127,7 +125,7 @@ contract Singlethrift {
             revert Deadline("DEADLINE NOT REACHED!!");
         }
         if(account.endTime < block.timestamp && !account.goalStatus){
-            uint256 _penaltyfee = amount * 5 / 100;
+            uint256 _penaltyfee = amount * 2 / 100;
             uint256 _amount = amount - _penaltyfee;
             account.amountContributed = 0;
             require(account.currency.transfer(_owner, _amount), "FAILED!!");
@@ -160,7 +158,7 @@ contract Singlethrift {
         }else{
             uint256 amountSaved = account.amountContributed;
             account.amountContributed = 0;
-            uint256 penaltyfee = amountSaved * 5 / 100;
+            uint256 penaltyfee = amountSaved * 2 / 100;
             uint256 amount = amountSaved - penaltyfee;
             require(account.currency.transfer(account.thriftAddress, penaltyfee), "FAILED!!");
             require(account.currency.transfer(_owner, amount), "FAILED!!");

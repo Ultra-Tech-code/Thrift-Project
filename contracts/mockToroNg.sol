@@ -3,7 +3,7 @@ pragma solidity ^0.8.9;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
-contract USDT is ERC20("USDT", "USDT") {
+contract mockToroNg is ERC20("mockToroNg", "tng") {
     
     address owner;
 

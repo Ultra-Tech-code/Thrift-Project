@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.19;
+pragma solidity ^0.8.17;
 import "./IERC20.sol";
-//use comsole.log to debug
-import "hardhat/console.sol";
 
 contract Groupthrift {
     uint256 memberId;
@@ -61,7 +59,6 @@ contract Groupthrift {
     Account account;
 
     constructor (address _owner,address _thriftAddress, string memory _goalDescription, uint256 _target, uint256 _duration, IERC20 _currency, uint256 _startTime, uint256 _members, address[] memory _membersAddress, uint256 _savingInterval) {
-        console.log("duration ---", _duration);
             for (uint i = 0; i < _members; i++) {
                address member = _membersAddress[i];
 
@@ -134,8 +131,6 @@ contract Groupthrift {
 
     function withdraw(address _member) external validMember(_member) {
         userAccount storage USA = usersaccount[_member];
-        console.log("time..", account.endTime);
-        console.log("block time..", block.timestamp);
         uint256 amount = USA.amountContributed;
         if(msg.sender != _member){
            revert Owner("NOT OWNER!!");

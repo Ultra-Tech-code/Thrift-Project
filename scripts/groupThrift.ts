@@ -5,9 +5,9 @@ async function main() {
   const[deployer, user1, user2, user3, user4] = await ethers.getSigners();
 
   //Deploy USDT contract
-  const USDT = await ethers.deployContract("USDT");
-  await USDT.waitForDeployment();
-  console.log(`USDT deployed to ${USDT.target}`);
+  const mockToroNg = await ethers.deployContract("mockToroNg");
+  await mockToroNg.waitForDeployment();
+  console.log(`mockToroNg deployed to ${mockToroNg.target}`);
 
 
   // Deploy Thrift contract
@@ -17,7 +17,7 @@ async function main() {
 
 //-------------interact with contract------------//
 const thrift = await ethers.getContractAt("Thrift", Thrift.target);
-const usdt = await ethers.getContractAt("USDT", USDT.target);
+const mockToro = await ethers.getContractAt("mockToroNg", mockToroNg.target);
 
 //params
 const target = ethers.parseEther("100");
@@ -26,7 +26,7 @@ const interval = 60 * 60 * 24 * 2; // 2 days
 const startTime = 60 * 60 * 24 * 2 ; // 2 days
 
 //createGoal
-const groupthrifttx = await thrift.connect(user1).createGroupThrift(usdt.target, 4, [user1.address, user2.address, user3.address, user4.address], "Buy a new car", target, duration, startTime, interval);
+const groupthrifttx = await thrift.connect(user1).createGroupThrift(mockToroNg.target, 4, [user1.address, user2.address, user3.address, user4.address], "Buy a new car", target, duration, startTime, interval);
 const groupthriftReceipt = await groupthrifttx.wait();
 console.log(groupthriftReceipt)
 
@@ -43,17 +43,17 @@ console.log(userGroup)
 
 //------------------usdt intercation-------------//
 //mint
-const minttx = await usdt.mintToken(user1.address, target)
-               await usdt.mintToken(deployer.address, target)
-               await usdt.mintToken(user2.address, target)
-               await usdt.mintToken(user3.address, target)
+const minttx = await mockToro.mintToken(user1.address, target)
+               await mockToro.mintToken(deployer.address, target)
+               await mockToro.mintToken(user2.address, target)
+               await mockToro.mintToken(user3.address, target)
 await minttx.wait();
 
 //approve
-const approvetx = await usdt.connect(user1).approve(groupthriftAddress, target)
-                  await usdt.connect(deployer).approve(groupthriftAddress, target)
-                  await usdt.connect(user2).approve(groupthriftAddress, target)
-                  await usdt.connect(user3).approve(groupthriftAddress, target)
+const approvetx = await mockToro.connect(user1).approve(groupthriftAddress, target)
+                  await mockToro.connect(deployer).approve(groupthriftAddress, target)
+                  await mockToro.connect(user2).approve(groupthriftAddress, target)
+                  await mockToro.connect(user3).approve(groupthriftAddress, target)
 await approvetx.wait()
 
 
@@ -84,16 +84,16 @@ await groupthrift.connect(user3).save(user3.address)
 
 console.log(savetx, "save result")
 
-const singlethriftWhenSave = await usdt.balanceOf(groupthriftAddress)
+const singlethriftWhenSave = await mockToro.balanceOf(groupthriftAddress)
 console.log(singlethriftWhenSave.toString(), "thrift balance when saved")
 
-const userBalanceSaved = await usdt.balanceOf(user1.address)
+const userBalanceSaved = await mockToro.balanceOf(user1.address)
 console.log(userBalanceSaved.toString(), "user balance when saved")
 
 // hardhat time travel
 await ethers.provider.send("evm_increaseTime", [duration]);
 const blockTime = await ethers.provider.getBlock("latest");
-console.log(blockTime.timestamp, "block time")
+console.log(blockTime?.timestamp, "block time")
 
 //withdraw
 const withdrawtx = await groupthrift.connect(user1).withdraw(user1.address)
@@ -111,11 +111,11 @@ console.log(withdrawtx, "withdraw result")
 
 
 //user balance
-const userBalance = await usdt.balanceOf(user1.address)
+const userBalance = await mockToro.balanceOf(user1.address)
 console.log(userBalance.toString(), "user balance")
 
 //thrift balance
-const thriftBalance = await usdt.balanceOf(groupthriftAddress)
+const thriftBalance = await mockToro.balanceOf(groupthriftAddress)
 console.log(thriftBalance.toString(), "groupthriftAddress balance")
 
 }
