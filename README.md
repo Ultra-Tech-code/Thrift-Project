@@ -1,8 +1,12 @@
-# Sample Hardhat Project
+# Thrift Project
 
-This project demonstrates a basic Hardhat use case. It comes with a sample contract, a test for that contract, and a script that deploys that contract.
+This project is deployed on Torochain
+
+It conatains contracts, a test for that contract, and a script that deploys that contract.
 
 Try running some of the following tasks:
+
+# deployeed address: 0x9377C1e6747e9b9541d79B5Dd0eC404597802CBa
 
 ```shell
 npx hardhat help
